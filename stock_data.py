@@ -73,8 +73,9 @@ def candle_bollingerband(df, column, period, code):
 
 
 CODE = 3563
-# 2897:日清食品  3563:food&life companies(スシロー)  4751: cyber agent  6501:日立
-# 9101:日本郵船  9104:商船三井  9434:softbank
+# 2897:日清食品 3563:food&life companies(スシロー) 4751: cyber agent 6501:日立
+# 8591:オリックス 9101:日本郵船 9104:商船三井 9434:softbank
+# リゾート 航空 ドル建て 情勢
 
 stock_data_df = get_stock_data(CODE)
 
