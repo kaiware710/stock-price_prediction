@@ -26,19 +26,23 @@ def stock_line_graph(df, column, code):
     """
     plt.figure()
     df[column].plot()
-    plt.savefig("./graph/stock_close_" + str(code) + ".png")
-    plt.close("all")
+    plt.savefig("./graph/" + column + "_" + str(code) + ".png")
 
 
-def stock_candle_graph(df, number_of_data, mav):
+def stock_candle_graph(df, number_of_data, mav, code):
     """ローソク足チャート、移動平均線、出来高を表示
     Args:
         df (pandas.core.frame.DataFrame): 株価データのDataFrame
         number_of_data (int): 可視化するデータ数（最新からの数）
         mav (tuple - int): {mav}日の移動平均線
     """
-    mpf.plot(df.tail(number_of_data), type="candle", mav=mav, volume=True)
-    # mpf save
+    mpf.plot(
+        df.tail(number_of_data),
+        type="candle",
+        mav=mav,
+        volume=True,
+        savefig="./graph/candle-mav-vol_" + str(code) + ".png",
+    )
 
 
 def bollinger_band(df, column, period, code):
@@ -59,23 +63,25 @@ def bollinger_band(df, column, period, code):
     df["bb_low"] = bollinger_band_low
     plt.figure()
     stock_data_df[["bb_up", "bb_mid", "bb_low"]].plot()
-    plt.savefig("./graph/stock_bollinger-band_" + str(code) + ".png")
-    plt.close("all")
+    plt.savefig("./graph/bollinger-band_" + str(code) + ".png")
 
 
-CODE = 3563
-# 2897:日清食品  3563:food&life companies(スシロー)  4751: cyber agent  6501:日立  9434:softbank
+CODE = 9434
+# 2897:日清食品  3563:food&life companies(スシロー)  4751: cyber agent  6501:日立
+# 9101:日本郵船  9104:商船三井  9434:softbank
 
 stock_data_df = get_stock_data(CODE)
 
 COLUMN = "Close"
-stock_line_graph(stock_data_df, COLUMN, CODE)
+# stock_line_graph(stock_data_df, COLUMN, CODE)
 
 # NUMBER_OF_DATA = len(stock_data_df.index)
 NUMBER_OF_DATA = 500
 MOVING_AVARAGE = (5, 25, 75)
-stock_candle_graph(stock_data_df, NUMBER_OF_DATA, MOVING_AVARAGE)
+# stock_candle_graph(stock_data_df, NUMBER_OF_DATA, MOVING_AVARAGE, CODE)
 
 COLUMN = "Close"
 PERIOD = 25
-bollinger_band(stock_data_df, COLUMN, PERIOD, CODE)
+# bollinger_band(stock_data_df, COLUMN, PERIOD, CODE)
+
+plt.close("all")
