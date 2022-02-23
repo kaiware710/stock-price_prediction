@@ -45,7 +45,7 @@ def stock_candle_graph(df, number_of_data, mav, code):
     )
 
 
-def bollinger_band(df, column, period, code):
+def candle_bollingerband(df, column, period, code):
     """ボリンジャーバンド:period日線と株価の変動範囲を折れ線グラフで表示
 
     Args:
@@ -62,11 +62,17 @@ def bollinger_band(df, column, period, code):
     df["bb_mid"] = bollinger_band_mid
     df["bb_low"] = bollinger_band_low
     plt.figure()
-    stock_data_df[["bb_up", "bb_mid", "bb_low"]].plot()
-    plt.savefig("./graph/bollinger-band_" + str(code) + ".png")
+    apd = mpf.make_addplot(df[["bb_up", "bb_mid", "bb_low"]])
+    mpf.plot(
+        df,
+        type="candle",
+        addplot=apd,
+        volume=True,
+        savefig="./graph/candle-bollingerband_" + str(code) + ".png",
+    )
 
 
-CODE = 9434
+CODE = 3563
 # 2897:日清食品  3563:food&life companies(スシロー)  4751: cyber agent  6501:日立
 # 9101:日本郵船  9104:商船三井  9434:softbank
 
@@ -80,8 +86,9 @@ NUMBER_OF_DATA = 500
 MOVING_AVARAGE = (5, 25, 75)
 # stock_candle_graph(stock_data_df, NUMBER_OF_DATA, MOVING_AVARAGE, CODE)
 
+NUMBER_OF_DATA = 300
 COLUMN = "Close"
 PERIOD = 25
-# bollinger_band(stock_data_df, COLUMN, PERIOD, CODE)
+candle_bollingerband(stock_data_df.tail(NUMBER_OF_DATA), COLUMN, PERIOD, CODE)
 
 plt.close("all")
