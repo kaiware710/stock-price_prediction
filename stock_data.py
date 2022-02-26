@@ -93,3 +93,5 @@ PERIOD = 25
 candle_bollingerband(stock_data_df.tail(NUMBER_OF_DATA), COLUMN, PERIOD, CODE)
 
 plt.close("all")
+
+# macd
