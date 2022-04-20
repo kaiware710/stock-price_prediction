@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import mplfinance as mpf
 import pandas_datareader.data as pdr
+import plotly.graph_objs as go
+import talib as ta
+from pyquery import PyQuery as pq
 from pyti.bollinger_bands import lower_bollinger_band as bb_low
 from pyti.bollinger_bands import middle_bollinger_band as bb_mid
 from pyti.bollinger_bands import upper_bollinger_band as bb_up
@@ -47,7 +50,6 @@ def stock_candle_graph(df, number_of_data, mav, code):
 
 def candle_bollingerband(df, column, period, code):
     """ボリンジャーバンド:period日線と株価の変動範囲を折れ線グラフで表示
-
     Args:
         df (pandas.core.frame.DataFrame): 株価データのDataFrame
         column (str): 列名
@@ -72,26 +74,135 @@ def candle_bollingerband(df, column, period, code):
     )
 
 
-CODE = 3563
+def macd(df):
+    """終値からMACDを計算し、可視化
+    Args:
+        df (pandas.core.frame.DataFrame): 株価データのDataFrame
+    """
+    close = df["Close"]
+    macd, macdsignal, _ = ta.MACD(close, fastperiod=12, slowperiod=26, signalperiod=9)
+    df["macd"] = macd
+    df["macd_signal"] = macdsignal
+    mdf = df.tail(100)  # 直近100日分のデータ
+    apd = [
+        mpf.make_addplot(mdf["macd"], panel=2, color="red"),  # 赤:MACDライン
+        mpf.make_addplot(mdf["macd_signal"], panel=2, color="blue"),  # 青:シグナルライン
+    ]
+    mpf.plot(mdf, type="candle", volume=True, addplot=apd)
+
+
+def rsi(df):
+    """終値からRSIを計算し、可視化  売られすぎ:0 〜 買われすぎ:100
+    Args:
+        df (pandas.core.frame.DataFrame): 株価データのDataFrame
+    """
+    close = df["Close"]
+    rsi14 = ta.RSI(close, timeperiod=14)
+    rsi28 = ta.RSI(close, timeperiod=28)
+    df["rsi14"], df["rsi28"] = rsi14, rsi28
+    mdf = df.tail(100)
+    apd = [
+        mpf.make_addplot(mdf["rsi14"], panel=2, color="red"),
+        mpf.make_addplot(mdf["rsi28"], panel=2, color="blue"),
+    ]
+    mpf.plot(mdf, type="candle", volume=True, addplot=apd)
+
+
+def sma(df):
+    """TA-Libを使って移動平均線を表示
+    Args:
+        df (pandas.core.frame.DataFrame): 株価データのDataFrame
+    """
+    close = df["Close"]
+    ma5, ma25, ma75 = (
+        ta.SMA(close, timeperiod=5),
+        ta.SMA(close, timeperiod=25),
+        ta.SMA(close, timeperiod=75),
+    )
+    df["ma5"], df["ma25"], df["ma75"] = ma5, ma25, ma75
+    mdf = df.tail(200)
+    apd = [
+        mpf.make_addplot(mdf["ma5"], panel=0, color="blue"),
+        mpf.make_addplot(mdf["ma25"], panel=0, color="purple"),
+        mpf.make_addplot(mdf["ma75"], panel=0, color="yellow"),
+    ]
+    mpf.plot(mdf, type="candle", volume=True, addplot=apd)
+
+
+def macd_rsi_sma(df):
+    """macd, rsi, 移動平均線を可視化
+    Args:
+        df (pandas.core.frame.DataFrame): 株価データのDataFrame
+    """
+    close = df["Close"]
+    macd, macdsignal, _ = ta.MACD(close, fastperiod=12, slowperiod=26, signalperiod=9)
+    df["macd"], df["macd_signal"] = macd, macdsignal
+    rsi14, rsi28 = ta.RSI(close, timeperiod=14), ta.RSI(close, timeperiod=28)
+    df["rsi14"], df["rsi28"] = rsi14, rsi28
+    ma5, ma25, ma75 = (
+        ta.SMA(close, timeperiod=5),
+        ta.SMA(close, timeperiod=25),
+        ta.SMA(close, timeperiod=75),
+    )
+    df["ma5"], df["ma25"], df["ma75"] = ma5, ma25, ma75
+
+    mdf = df.tail(200)
+    apd = [
+        mpf.make_addplot(mdf["ma5"], panel=0, color="blue"),
+        mpf.make_addplot(mdf["ma25"], panel=0, color="purple"),
+        mpf.make_addplot(mdf["ma75"], panel=0, color="yellow"),
+        mpf.make_addplot(mdf["macd"], panel=2, color="red"),
+        mpf.make_addplot(mdf["macd_signal"], panel=2, color="blue"),
+        mpf.make_addplot(mdf["rsi14"], panel=3, color="red"),
+        mpf.make_addplot(mdf["rsi28"], panel=3, color="blue"),
+    ]
+    mpf.plot(mdf, type="candle", volume=True, addplot=apd)
+
+
+def golden_dead_cross(code, df):
+    close = df["Close"]
+    # 5日, 25日の移動平均
+    ma5, ma25 = ta.SMA(close, timeperiod=5), ta.SMA(close, timeperiod=25)
+    df["ma5"], df["ma25"] = ma5, ma25
+
+    # 200日分のローソク足チャート
+    df = df.tail(200)
+
+    url = "https://kabutan.jp/stock/?code={}".format(code)
+    q = pq(url)
+    print(q)
+
+    # layout = {"title": {"text": ""}}
+
+
+CODE = 6501
 # 2897:日清食品 3563:food&life companies(スシロー) 4751: cyber agent 6501:日立
-# 8591:オリックス 9101:日本郵船 9104:商船三井 9434:softbank
+# 6670:MCJ 8591:オリックス 9101:日本郵船 9104:商船三井 9434:softbank
 # リゾート 航空 ドル建て 情勢
 
-stock_data_df = get_stock_data(CODE)
+DF = get_stock_data(CODE)
 
 COLUMN = "Close"
-# stock_line_graph(stock_data_df, COLUMN, CODE)
+# stock_line_graph(DF, COLUMN, CODE)
 
-# NUMBER_OF_DATA = len(stock_data_df.index)
+# NUMBER_OF_DATA = len(DF.index)
 NUMBER_OF_DATA = 500
 MOVING_AVARAGE = (5, 25, 75)
-# stock_candle_graph(stock_data_df, NUMBER_OF_DATA, MOVING_AVARAGE, CODE)
+# stock_candle_graph(DF, NUMBER_OF_DATA, MOVING_AVARAGE, CODE)
 
 NUMBER_OF_DATA = 300
 COLUMN = "Close"
 PERIOD = 25
-candle_bollingerband(stock_data_df.tail(NUMBER_OF_DATA), COLUMN, PERIOD, CODE)
+# candle_bollingerband(DF.tail(NUMBER_OF_DATA), COLUMN, PERIOD, CODE)
+
+# macd(DF)
+
+# rsi(DF)
+
+# sma(DF)
+
+# macd_rsi_sma(DF)
+
+golden_dead_cross(CODE, DF)
 
 plt.close("all")
-
-# macd
