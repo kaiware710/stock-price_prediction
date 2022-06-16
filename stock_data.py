@@ -234,7 +234,7 @@ def golden_dead_cross(code, df):
     fig.show()
 
 
-def summary_predict_stock(df):
+def summary_predict_stock(df, code, code_name):
     # 株価取得
     close = df["Close"]
     close_list = close.tolist()
@@ -272,14 +272,22 @@ def summary_predict_stock(df):
     # 計算結果 グラフ 120日分
     pdf = df.tail(120)
     layout = {
-        "title": {"text": "5401", "x": 0.5},
+        "title": {"text": str(code) + ":" + code_name, "x": 0.5},
         "xaxis": {"title": "日付", "rangeslider": {"visible": False}},
-        "yaxis": {"title": "価格（円）", "tickformat": ","},
+        "yaxis1": {
+            "title": "価格（円）",
+            "domain": [0.4, 1],
+            "side": "left",
+            "tickformat": ",",
+        },
+        "yaxis2": {"domain": [0.2, 0.35]},
+        "yaxis3": {"title": "Volume", "domain": [0.0, 0.2]},
         "plot_bgcolor": "light blue",
     }
     data = [
-        go.Candlestick(
+        go.Candlestick(  # ローソク足
             name="chart",
+            yaxis="y1",
             x=pdf.index,
             open=pdf["Open"],
             high=pdf["High"],
@@ -288,45 +296,65 @@ def summary_predict_stock(df):
             increasing_line_color="#00ada9",
             decreasing_line_color="#a0a0a0",
         ),
-        go.Scatter(
-            x=pdf.index, y=pdf["ma5"], name="MA5", line=dict(color="#ff007f", width=1.2)
+        go.Scatter(  # 5日移動平均線
+            name="MA5",
+            yaxis="y1",
+            x=pdf.index,
+            y=pdf["ma5"],
+            line=dict(color="#ff007f", width=1.2),
         ),
-        go.Scatter(
+        go.Scatter(  # 25日移動平均線
+            name="MA25",
+            yaxis="y1",
             x=pdf.index,
             y=pdf["ma25"],
-            name="MA25",
             line=dict(color="#7fbfff", width=1.2),
         ),
-        go.Scatter(
+        go.Scatter(  # ゴールデンクロス
+            name="Golden Cross",
+            yaxis="y1",
             x=pdf.index,
             y=pdf["gc"],
-            name="Golden Cross",
             mode="markers",
             marker=dict(size=12, color="blueviolet"),
         ),
-        go.Scatter(
+        go.Scatter(  # デッドクロス
+            name="Dead Cross",
+            yaxis="y1",
             x=pdf.index,
             y=pdf["dc"],
-            name="Dead Cross",
             mode="markers",
             marker=dict(size=12, color="black", symbol="x"),
         ),
-        # ボリンジャーバンド
-        go.Scatter(x=pdf.index, y=pdf["bb_up"], name="BB_Up", line=dict(width=0)),
-        go.Scatter(
+        go.Scatter(  # ボリンジャーバンド上限
+            name="",
+            yaxis="y1",
+            x=pdf.index,
+            y=pdf["bb_up"],
+            line=dict(color="lavender", width=0),
+        ),
+        go.Scatter(  # ボリンジャーバンド下限
+            name="BB",
+            yaxis="y1",
             x=pdf.index,
             y=pdf["bb_low"],
-            name="BB_Low",
-            line=dict(width=0),
+            line=dict(color="lavender", width=0),
             fill="tonexty",
             fillcolor="rgba(170,170,170,0.25)",
+        ),
+        go.Bar(  # 出来高
+            name="Volume",
+            yaxis="y3",
+            x=pdf.index,
+            y=pdf["Volume"],
+            marker=dict(color="slategray"),
         ),
     ]
     fig = go.Figure(data=data, layout=go.Layout(layout))
 
     # 日付と曜日を考慮
     df.reset_index(inplace=True)
-    # 3日に1日の日付を取り出す
+    # 3日に1日の日付を取り出す 重なり防止
     days_list = [df.index[idx : idx + 3] for idx in range(0, len(df.index), 3)]
     dates = [df["Date"][r[0]] for r in days_list]
     # X軸を更新
@@ -339,28 +367,37 @@ def summary_predict_stock(df):
             }
         }
     )
-
     fig.show()
 
 
+code_dict = {
+    2897: "日清食品",
+    3563: "food&life companies(スシロー)",
+    4751: "cyber agent",
+    5401: "日本製鉄",
+    6501: "日立",
+    6670: "MCJ",
+    8591: "オリックス",
+    9101: "日本郵船",
+    9104: "商船三井",
+    9434: "softbank",
+}
 CODE = 5401
-# 2897:日清食品 3563:food&life companies(スシロー) 4751:cyber agent 5401:日本製鉄
-# 6501:日立 6670:MCJ 8591:オリックス 9101:日本郵船 9104:商船三井 9434:softbank
-# リゾート 航空 ドル建て 情勢
+CODE_NAME = code_dict[CODE]
 
 DF = get_stock_data(CODE)
 
-COLUMN = "Close"
+# COLUMN = "Close"
 # stock_line_graph(DF, COLUMN, CODE)
 
 # NUMBER_OF_DATA = len(DF.index)
-NUMBER_OF_DATA = 500
-MOVING_AVARAGE = (5, 25, 75)
+# NUMBER_OF_DATA = 500
+# MOVING_AVARAGE = (5, 25, 75)
 # stock_candle_graph(DF, NUMBER_OF_DATA, MOVING_AVARAGE, CODE)
 
-NUMBER_OF_DATA = 300
-COLUMN = "Close"
-PERIOD = 25
+# NUMBER_OF_DATA = 300
+# COLUMN = "Close"
+# PERIOD = 25
 # candle_bollingerband(DF.tail(NUMBER_OF_DATA), COLUMN, PERIOD, CODE)
 
 # macd(DF)
@@ -368,6 +405,6 @@ PERIOD = 25
 # sma(DF)
 # macd_rsi_sma(DF)
 # golden_dead_cross(CODE, DF)
-summary_predict_stock(DF)
+summary_predict_stock(DF, CODE, CODE_NAME)
 
 plt.close("all")
