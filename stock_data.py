@@ -18,7 +18,12 @@ def get_stock_data(code):
     Returns:
         df (pandas.core.frame.DataFrame): 株価データのDataFrame
     """
+    # 日本株
     df = pdr.DataReader("{}.JP".format(code), "stooq").sort_index()
+    # ダウ平均
+    # df = pdr.DataReader("^DJI", "stooq")
+    # ヴァンガード S&P500 ETF
+    # df = pdr.DataReader("VOO", "stooq")
     return df
 
 
@@ -272,7 +277,8 @@ def summary_predict_stock(df, code, code_name):
     df["gc"], df["dc"] = gc, dc
 
     # 計算結果 グラフ 120日分
-    pdf = df.tail(120)
+    pdf = df.tail(120)  # 日本株
+    # pdf = df.head(120)  # ダウ平均, VOO
     layout = {
         "title": {"text": str(code) + ":" + code_name, "x": 0.5},
         "xaxis": {"title": "日付", "rangeslider": {"visible": False}},
@@ -383,21 +389,21 @@ def summary_predict_stock(df, code, code_name):
     ]
     fig = go.Figure(data=data, layout=go.Layout(layout))
 
-    # 日付と曜日を考慮
-    df.reset_index(inplace=True)
-    # 3日に1日の日付を取り出す 重なり防止
-    days_list = [df.index[idx : idx + 3] for idx in range(0, len(df.index), 3)]
-    dates = [df["Date"][r[0]] for r in days_list]
-    # X軸を更新
-    fig["layout"].update(
-        {
-            "xaxis": {
-                "showgrid": True,
-                "tickvals": np.arange(0, df.index[-1], 3),
-                "ticktext": [x.strftime("%m/%d") for x in dates],
-            }
-        }
-    )
+    # # 日付と曜日を考慮  (表示分かりやすくならなかったから削除)
+    # df.reset_index(inplace=True)
+    # # 3日に1日の日付を取り出す 重なり防止
+    # days_list = [df.index[idx : idx + 3] for idx in range(0, len(df.index), 3)]
+    # dates = [df["Date"][r[0]] for r in days_list]
+    # # X軸を更新
+    # fig["layout"].update(
+    #     {
+    #         "xaxis": {
+    #             "showgrid": True,
+    #             "tickvals": np.arange(0, df.index[-1], 3),
+    #             "ticktext": [x.strftime("%m/%d") for x in dates],
+    #         }
+    #     }
+    # )
     fig.show()
 
 
@@ -422,8 +428,10 @@ code_dict = {
     9101: "日本郵船",
     9104: "商船三井",
     9434: "softbank",
+    "dji": "ダウ平均",
+    "voo": "ヴァンガード S&P500 ETF",
 }
-CODE = 6501
+CODE = 2897
 CODE_NAME = code_dict[CODE]
 
 DF = get_stock_data(CODE)
@@ -446,7 +454,7 @@ DF = get_stock_data(CODE)
 # sma(DF)
 # macd_rsi_sma(DF)
 # golden_dead_cross(CODE, DF)
-# summary_predict_stock(DF, CODE, CODE_NAME)
-prophet_predict(DF, CODE_NAME)
+summary_predict_stock(DF, CODE, CODE_NAME)
+# prophet_predict(DF, CODE_NAME)
 
 plt.close("all")
