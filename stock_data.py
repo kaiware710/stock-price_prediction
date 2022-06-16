@@ -4,8 +4,6 @@ import numpy as np
 import pandas_datareader.data as pdr
 import plotly.graph_objs as go
 import talib as ta
-
-# from pyquery import PyQuery as pq
 from pyti.bollinger_bands import lower_bollinger_band as bb_low
 from pyti.bollinger_bands import middle_bollinger_band as bb_mid
 from pyti.bollinger_bands import upper_bollinger_band as bb_up
@@ -236,9 +234,118 @@ def golden_dead_cross(code, df):
     fig.show()
 
 
-CODE = 6501
-# 2897:日清食品 3563:food&life companies(スシロー) 4751: cyber agent 6501:日立
-# 6670:MCJ 8591:オリックス 9101:日本郵船 9104:商船三井 9434:softbank
+def summary_predict_stock(df):
+    # 株価取得
+    close = df["Close"]
+    close_list = close.tolist()
+
+    # ボリンジャーバンド
+    period = 25
+    bbup, bbmid, bblow = (
+        bb_up(close_list, period),
+        bb_mid(close_list, period),
+        bb_low(close_list, period),
+    )
+    df["bb_up"], df["bb_mid"], df["bb_low"] = bbup, bbmid, bblow
+
+    # オシレーター 移動平均 (Ta-Lib)
+    macd, macdsignal, _ = ta.MACD(close, fastperiod=12, slowperiod=26, signalperiod=9)
+    df["macd"], df["macd_signal"] = macd, macdsignal
+    rsi14, rsi28 = ta.RSI(close, timeperiod=14), ta.RSI(close, timeperiod=28)
+    df["rsi14"], df["rsi28"] = rsi14, rsi28
+    ma5, ma25, ma75 = (
+        ta.SMA(close, timeperiod=5),
+        ta.SMA(close, timeperiod=25),
+        ta.SMA(close, timeperiod=75),
+    )
+    df["ma5"], df["ma25"], df["ma75"] = ma5, ma25, ma75
+
+    # ゴールデンクロス デッドクロス
+    cross = ma5 > ma25
+    cross_shift = cross.shift(1)
+    temp_gc = (cross != cross_shift) & (cross == True)
+    temp_dc = (cross != cross_shift) & (cross == False)
+    gc = [m if g == True else np.nan for g, m in zip(temp_gc, ma5)]
+    dc = [m if d == True else np.nan for d, m in zip(temp_dc, ma25)]
+    df["gc"], df["dc"] = gc, dc
+
+    # 計算結果 グラフ 120日分
+    pdf = df.tail(120)
+    layout = {
+        "title": {"text": "5401", "x": 0.5},
+        "xaxis": {"title": "日付", "rangeslider": {"visible": False}},
+        "yaxis": {"title": "価格（円）", "tickformat": ","},
+        "plot_bgcolor": "light blue",
+    }
+    data = [
+        go.Candlestick(
+            name="chart",
+            x=pdf.index,
+            open=pdf["Open"],
+            high=pdf["High"],
+            low=pdf["Low"],
+            close=pdf["Close"],
+            increasing_line_color="#00ada9",
+            decreasing_line_color="#a0a0a0",
+        ),
+        go.Scatter(
+            x=pdf.index, y=pdf["ma5"], name="MA5", line=dict(color="#ff007f", width=1.2)
+        ),
+        go.Scatter(
+            x=pdf.index,
+            y=pdf["ma25"],
+            name="MA25",
+            line=dict(color="#7fbfff", width=1.2),
+        ),
+        go.Scatter(
+            x=pdf.index,
+            y=pdf["gc"],
+            name="Golden Cross",
+            mode="markers",
+            marker=dict(size=12, color="blueviolet"),
+        ),
+        go.Scatter(
+            x=pdf.index,
+            y=pdf["dc"],
+            name="Dead Cross",
+            mode="markers",
+            marker=dict(size=12, color="black", symbol="x"),
+        ),
+        # ボリンジャーバンド
+        go.Scatter(x=pdf.index, y=pdf["bb_up"], name="BB_Up", line=dict(width=0)),
+        go.Scatter(
+            x=pdf.index,
+            y=pdf["bb_low"],
+            name="BB_Low",
+            line=dict(width=0),
+            fill="tonexty",
+            fillcolor="rgba(170,170,170,0.25)",
+        ),
+    ]
+    fig = go.Figure(data=data, layout=go.Layout(layout))
+
+    # 日付と曜日を考慮
+    df.reset_index(inplace=True)
+    # 3日に1日の日付を取り出す
+    days_list = [df.index[idx : idx + 3] for idx in range(0, len(df.index), 3)]
+    dates = [df["Date"][r[0]] for r in days_list]
+    # X軸を更新
+    fig["layout"].update(
+        {
+            "xaxis": {
+                "showgrid": True,
+                "tickvals": np.arange(0, df.index[-1], 3),
+                "ticktext": [x.strftime("%m/%d") for x in dates],
+            }
+        }
+    )
+
+    fig.show()
+
+
+CODE = 5401
+# 2897:日清食品 3563:food&life companies(スシロー) 4751:cyber agent 5401:日本製鉄
+# 6501:日立 6670:MCJ 8591:オリックス 9101:日本郵船 9104:商船三井 9434:softbank
 # リゾート 航空 ドル建て 情勢
 
 DF = get_stock_data(CODE)
@@ -257,13 +364,10 @@ PERIOD = 25
 # candle_bollingerband(DF.tail(NUMBER_OF_DATA), COLUMN, PERIOD, CODE)
 
 # macd(DF)
-
 # rsi(DF)
-
 # sma(DF)
-
 # macd_rsi_sma(DF)
-
-golden_dead_cross(CODE, DF)
+# golden_dead_cross(CODE, DF)
+summary_predict_stock(DF)
 
 plt.close("all")
