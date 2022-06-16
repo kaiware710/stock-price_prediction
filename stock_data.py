@@ -8,6 +8,8 @@ from pyti.bollinger_bands import lower_bollinger_band as bb_low
 from pyti.bollinger_bands import middle_bollinger_band as bb_mid
 from pyti.bollinger_bands import upper_bollinger_band as bb_up
 
+from prophet import Prophet
+
 
 def get_stock_data(code):
     """Stooqから株価データ5年分をdfで取得
@@ -276,12 +278,14 @@ def summary_predict_stock(df, code, code_name):
         "xaxis": {"title": "日付", "rangeslider": {"visible": False}},
         "yaxis1": {
             "title": "価格（円）",
-            "domain": [0.4, 1],
+            "domain": [0.40, 1.00],
             "side": "left",
             "tickformat": ",",
         },
-        "yaxis2": {"domain": [0.2, 0.35]},
-        "yaxis3": {"title": "Volume", "domain": [0.0, 0.2]},
+        "yaxis2": {"title": "", "domain": [0.30, 0.40], "side": "right"},
+        "yaxis3": {"title": "RSI", "domain": [0.20, 0.30], "side": "right"},
+        "yaxis4": {"title": "MACD", "domain": [0.10, 0.20], "side": "right"},
+        "yaxis5": {"title": "出来高", "domain": [0.00, 0.10], "side": "right"},
         "plot_bgcolor": "light blue",
     }
     data = [
@@ -328,7 +332,6 @@ def summary_predict_stock(df, code, code_name):
         ),
         go.Scatter(  # ボリンジャーバンド上限
             name="",
-            yaxis="y1",
             x=pdf.index,
             y=pdf["bb_up"],
             line=dict(color="lavender", width=0),
@@ -342,9 +345,37 @@ def summary_predict_stock(df, code, code_name):
             fill="tonexty",
             fillcolor="rgba(170,170,170,0.25)",
         ),
+        go.Scatter(  # 短期RSI
+            name="RSI14",
+            yaxis="y3",
+            x=pdf.index,
+            y=pdf["rsi14"],
+            line=dict(color="purple", width=1),
+        ),
+        go.Scatter(  # 長期RSI
+            name="RSI28",
+            yaxis="y3",
+            x=pdf.index,
+            y=pdf["rsi28"],
+            line=dict(color="green", width=1),
+        ),
+        go.Scatter(  # MACD
+            name="MACD",
+            yaxis="y4",
+            x=pdf.index,
+            y=pdf["macd"],
+            line=dict(color="purple", width=1),
+        ),
+        go.Scatter(  # MACDシグナル
+            name="MACD_signal",
+            yaxis="y4",
+            x=pdf.index,
+            y=pdf["macd_signal"],
+            line=dict(color="green", width=1),
+        ),
         go.Bar(  # 出来高
             name="Volume",
-            yaxis="y3",
+            yaxis="y5",
             x=pdf.index,
             y=pdf["Volume"],
             marker=dict(color="slategray"),
@@ -370,6 +401,16 @@ def summary_predict_stock(df, code, code_name):
     fig.show()
 
 
+def prophet_predict(df, code_name):
+    df["ds"] = df.index
+    df = df.rename(columns={"Close": "y"})
+    model = Prophet().fit(df)
+    future = model.make_future_dataframe(periods=365)
+    forecast = model.predict(future)
+    fig = model.plot(forecast)
+    fig.savefig("./prophet/" + code_name + ".png")
+
+
 code_dict = {
     2897: "日清食品",
     3563: "food&life companies(スシロー)",
@@ -382,7 +423,7 @@ code_dict = {
     9104: "商船三井",
     9434: "softbank",
 }
-CODE = 5401
+CODE = 6501
 CODE_NAME = code_dict[CODE]
 
 DF = get_stock_data(CODE)
@@ -405,6 +446,7 @@ DF = get_stock_data(CODE)
 # sma(DF)
 # macd_rsi_sma(DF)
 # golden_dead_cross(CODE, DF)
-summary_predict_stock(DF, CODE, CODE_NAME)
+# summary_predict_stock(DF, CODE, CODE_NAME)
+prophet_predict(DF, CODE_NAME)
 
 plt.close("all")
